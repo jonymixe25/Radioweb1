@@ -88,7 +88,12 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
   };
 
   const playSong = async (songUrl: string, songId: string, onEnd?: () => void) => {
-    console.log("Playing song:", songUrl);
+    console.log("Attempting to play song:", songUrl);
+    if (!songUrl) {
+      console.error("No song URL provided");
+      return;
+    }
+
     try {
       await connectSocket();
       stopSong(); // Stop any current song
@@ -98,23 +103,37 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
       }
 
       let response;
+      const fetchUrl = songUrl.startsWith("/") ? window.location.origin + songUrl : songUrl;
+      
       try {
-        console.log("Fetching song directly:", songUrl);
-        const fetchUrl = songUrl.startsWith("/") ? window.location.origin + songUrl : songUrl;
+        console.log("Fetching song directly:", fetchUrl);
         response = await fetch(fetchUrl);
         if (!response.ok) throw new Error(`Direct fetch failed with status: ${response.status}`);
       } catch (err: any) {
-        console.warn("Direct fetch failed:", err.message);
-        const isExternal = songUrl.startsWith("http") && !songUrl.includes(window.location.host);
-        if (!isExternal) {
-          throw err; // Don't proxy local or blob URLs
+        console.warn("Direct fetch failed or CORS issue:", err.message);
+        
+        // Check if it's a local URL or blob URL
+        const isLocal = songUrl.startsWith("/") || songUrl.startsWith("blob:") || songUrl.includes(window.location.host);
+        
+        if (isLocal) {
+          console.error("Local/Internal resource failed to load:", songUrl);
+          throw new Error(`No se pudo cargar el recurso local: ${err.message}`);
         }
+
         console.log("Trying proxy for external URL:", songUrl);
-        response = await fetch(`/api/proxy-audio?url=${encodeURIComponent(songUrl)}`);
-        if (!response.ok) throw new Error(`Proxy fetch failed with status: ${response.status}`);
+        try {
+          response = await fetch(`/api/proxy-audio?url=${encodeURIComponent(songUrl)}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Proxy fetch failed (${response.status}): ${errorText}`);
+          }
+        } catch (proxyErr: any) {
+          console.error("Proxy fetch failed:", proxyErr.message);
+          throw new Error(`Error de red al intentar cargar la canción externa: ${proxyErr.message}`);
+        }
       }
 
-      console.log("Decoding audio data...");
+      console.log("Song fetched successfully, decoding...");
       const arrayBuffer = await response.arrayBuffer();
       
       const tempContext = new (window.AudioContext || (window as any).webkitAudioContext)();

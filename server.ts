@@ -12,13 +12,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const uploadsDir = path.resolve(__dirname, "uploads");
+console.log("Uploads directory:", uploadsDir);
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -181,8 +182,23 @@ async function startServer() {
         res.setHeader("Content-Type", contentType);
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      res.send(Buffer.from(arrayBuffer));
+      // Stream the response instead of buffering it
+      if (response.body) {
+        // @ts-ignore - response.body is a ReadableStream in some environments, but we need it as a Node stream or similar
+        // In Node 18+ fetch, response.body is a ReadableStream. We can convert it or use a different approach.
+        // For simplicity and compatibility, we'll use arrayBuffer if streaming is tricky, 
+        // but let's try to be more efficient.
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
+        }
+        res.end();
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
+      }
     } catch (error: any) {
       console.error("Proxy error:", error);
       res.status(500).send(`Error al obtener audio: ${error.message}`);
