@@ -4,11 +4,12 @@ import { Play, Pause, Volume2, Radio, Loader2, Wifi, WifiOff } from "lucide-reac
 interface ListenerProps {
   coverUrl?: string;
   stationName?: string;
+  wsServer?: string;
 }
 
 type PlayerStatus = "idle" | "connecting" | "buffering" | "live" | "offline";
 
-export default function Listener({ coverUrl, stationName = "Lysten Radio" }: ListenerProps) {
+export default function Listener({ coverUrl, stationName = "Lysten Radio", wsServer }: ListenerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [status, setStatus] = useState<PlayerStatus>("idle");
   const [volume, setVolume] = useState(0.8);
@@ -39,7 +40,8 @@ export default function Listener({ coverUrl, stationName = "Lysten Radio" }: Lis
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${protocol}//${window.location.host}`);
+    const defaultWsUrl = `${protocol}//${window.location.host}/ws`;
+    const socket = new WebSocket(wsServer || defaultWsUrl);
     socketRef.current = socket;
 
     socket.onopen = () => {

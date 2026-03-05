@@ -8,7 +8,11 @@ interface PlaylistItem {
   name: string;
 }
 
-export default function Broadcaster() {
+interface BroadcasterProps {
+  wsServer?: string;
+}
+
+export default function Broadcaster({ wsServer }: BroadcasterProps) {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
@@ -52,7 +56,8 @@ export default function Broadcaster() {
 
       // Connect to WebSocket
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const socket = new WebSocket(`${protocol}//${window.location.host}`);
+      const defaultWsUrl = `${protocol}//${window.location.host}/ws`;
+      const socket = new WebSocket(wsServer || defaultWsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {

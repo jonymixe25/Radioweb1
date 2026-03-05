@@ -7,8 +7,21 @@ import path from "path";
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ noServer: true });
   const PORT = 3000;
+
+  // Handle WebSocket upgrade manually for better proxy compatibility
+  server.on("upgrade", (request, socket, head) => {
+    const pathname = new URL(request.url || "", `http://${request.headers.host}`).pathname;
+
+    if (pathname === "/ws") {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit("connection", ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
 
   // Store connected listeners
   const listeners = new Set<WebSocket>();

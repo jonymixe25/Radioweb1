@@ -12,7 +12,8 @@ export default function App() {
   const [stationSettings, setStationSettings] = useState({
     name: "Lysten Radio",
     website: "https://radioweb1.vercel.app/",
-    description: "Tu Radio, Tu Estilo, Tu Momento."
+    description: "Tu Radio, Tu Estilo, Tu Momento.",
+    wsServer: "" // Empty means use current host
   });
 
   return (
@@ -88,7 +89,11 @@ export default function App() {
                       </a>
                     )}
                   </div>
-                  <Listener coverUrl={coverUrl} stationName={stationSettings.name} />
+                  <Listener 
+                    coverUrl={coverUrl} 
+                    stationName={stationSettings.name} 
+                    wsServer={stationSettings.wsServer}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
@@ -107,7 +112,7 @@ export default function App() {
                         Inicia tu propia estación de radio en segundos. Conecta tu micrófono y empieza a transmitir.
                       </p>
                     </div>
-                    <Broadcaster />
+                    <Broadcaster wsServer={stationSettings.wsServer} />
                   </div>
                   
                   <div className="flex flex-col gap-6">
@@ -143,6 +148,19 @@ export default function App() {
                             onChange={(e) => setStationSettings({...stationSettings, description: e.target.value})}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
                           />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Servidor WebSocket (Opcional)</label>
+                          <input 
+                            type="text" 
+                            value={stationSettings.wsServer}
+                            onChange={(e) => setStationSettings({...stationSettings, wsServer: e.target.value})}
+                            placeholder="wss://tu-servidor.com/ws"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
+                          />
+                          <p className="text-[9px] text-white/20 mt-1 italic">
+                            Deja vacío para usar el servidor actual. Necesario si despliegas en Vercel.
+                          </p>
                         </div>
                       </div>
                     </div>
