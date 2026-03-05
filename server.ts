@@ -122,6 +122,31 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.get("/api/proxy-audio", async (req, res) => {
+    const url = req.query.url as string;
+    if (!url) {
+      return res.status(400).send("URL is required");
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType) {
+        res.setHeader("Content-Type", contentType);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      res.send(Buffer.from(arrayBuffer));
+    } catch (error) {
+      console.error("Proxy error:", error);
+      res.status(500).send("Error fetching audio");
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

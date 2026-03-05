@@ -96,7 +96,19 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       }
 
-      const response = await fetch(songUrl);
+      let response;
+      try {
+        response = await fetch(songUrl);
+        if (!response.ok) throw new Error("Direct fetch failed");
+      } catch (err) {
+        if (songUrl.startsWith("blob:")) {
+          throw err; // Re-throw if it's a local blob that failed
+        }
+        console.log("Direct fetch failed or CORS issue, trying proxy...");
+        response = await fetch(`/api/proxy-audio?url=${encodeURIComponent(songUrl)}`);
+        if (!response.ok) throw new Error("Proxy fetch failed");
+      }
+
       const arrayBuffer = await response.arrayBuffer();
       
       const tempContext = new (window.AudioContext || (window as any).webkitAudioContext)();
