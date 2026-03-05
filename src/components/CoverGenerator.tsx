@@ -57,7 +57,7 @@ export default function CoverGenerator({ onCoverGenerated }: CoverGeneratorProps
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe el estilo de tu radio (ej: Cyberpunk, Jazz Lounge, Minimalist...)"
+          placeholder="Describe el estilo de tu radio (ej: Cyberpunk, Jazz Lounge, Minimalista...)"
           className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-purple-500/50 transition-colors min-h-[100px] resize-none"
         />
       </div>

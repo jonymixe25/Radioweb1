@@ -3,18 +3,37 @@ import Broadcaster from "./components/Broadcaster";
 import Listener from "./components/Listener";
 import CoverGenerator from "./components/CoverGenerator";
 import EmbedCode from "./components/EmbedCode";
-import { Radio, LayoutDashboard, Music, Code as CodeIcon, Github } from "lucide-react";
+import PlaylistLibrary from "./components/PlaylistLibrary";
+import { BroadcastProvider } from "./contexts/BroadcastContext";
+import { Radio, LayoutDashboard, Music, Code as CodeIcon, Github, Lock, Unlock, Key } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
+  return (
+    <BroadcastProvider>
+      <AppContent />
+    </BroadcastProvider>
+  );
+}
+
+function AppContent() {
   const [activeTab, setActiveTab] = useState<"listener" | "broadcaster">("listener");
   const [coverUrl, setCoverUrl] = useState<string | undefined>(undefined);
-  const [stationSettings, setStationSettings] = useState({
-    name: "Lysten Radio",
-    website: "https://ais-pre-qu4td72oh2l66nwsysyezp-362610163893.us-east1.run.app",
-    description: "Tu Radio, Tu Estilo, Tu Momento.",
-    wsServer: "" // Empty means use current host
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState(false);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simple password for demo purposes
+    if (password === "admin123") {
+      setIsAuthenticated(true);
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+      setTimeout(() => setAuthError(false), 2000);
+    }
+  };
 
   return (
     <div className="min-h-screen font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -31,7 +50,7 @@ export default function App() {
             <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Radio className="text-white w-6 h-6" />
             </div>
-            <span className="font-display font-extrabold text-2xl tracking-tight">{stationSettings.name}</span>
+            <span className="font-display font-extrabold text-2xl tracking-tight">Lysten Radio</span>
           </div>
           
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
@@ -73,27 +92,13 @@ export default function App() {
                 >
                   <div className="text-center max-w-lg mb-4">
                     <h1 className="text-4xl md:text-5xl font-display font-extrabold mb-4 leading-tight">
-                      {stationSettings.name.split(' ')[0]} <span className="text-emerald-400">{stationSettings.name.split(' ').slice(1).join(' ')}</span>
+                      Tu Radio, <span className="text-emerald-400">Tu Estilo</span>, Tu Momento.
                     </h1>
                     <p className="text-white/50 text-lg">
-                      {stationSettings.description}
+                      Sintoniza transmisiones en vivo de todo el mundo con calidad digital superior.
                     </p>
-                    {stationSettings.website && (
-                      <a 
-                        href={stationSettings.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-block mt-4 text-xs font-mono text-emerald-400 hover:underline"
-                      >
-                        {stationSettings.website}
-                      </a>
-                    )}
                   </div>
-                  <Listener 
-                    coverUrl={coverUrl} 
-                    stationName={stationSettings.name} 
-                    wsServer={stationSettings.wsServer}
-                  />
+                  <Listener coverUrl={coverUrl} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -101,72 +106,69 @@ export default function App() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-8"
+                  className="w-full"
                 >
-                  <div className="flex flex-col gap-8">
-                    <div className="text-left">
-                      <h1 className="text-4xl font-display font-extrabold mb-4">
-                        Centro de <span className="text-emerald-400">Control</span>
-                      </h1>
-                      <p className="text-white/50">
-                        Inicia tu propia estación de radio en segundos. Conecta tu micrófono y empieza a transmitir.
-                      </p>
-                    </div>
-                    <Broadcaster wsServer={stationSettings.wsServer} />
-                  </div>
-                  
-                  <div className="flex flex-col gap-6">
-                    <div className="glass p-6 rounded-3xl flex flex-col gap-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <LayoutDashboard className="w-5 h-5 text-emerald-400" />
-                        <h3 className="font-display font-bold">Configuración de Estación</h3>
+                  {!isAuthenticated ? (
+                    <div className="max-w-md mx-auto glass p-10 rounded-[2.5rem] flex flex-col items-center gap-8 shadow-2xl border border-white/10">
+                      <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center">
+                        <Lock className="w-10 h-10 text-emerald-400" />
                       </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Nombre de la Radio</label>
-                          <input 
-                            type="text" 
-                            value={stationSettings.name}
-                            onChange={(e) => setStationSettings({...stationSettings, name: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
+                      <div className="text-center">
+                        <h2 className="text-3xl font-display font-extrabold mb-2">Acceso Restringido</h2>
+                        <p className="text-white/40 text-sm">Ingresa la contraseña para acceder al panel de control.</p>
+                      </div>
+                      <form onSubmit={handleLogin} className="w-full space-y-4">
+                        <div className="relative group">
+                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+                          <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Contraseña (admin123)"
+                            className={`w-full bg-white/5 border ${authError ? 'border-red-500/50' : 'border-white/10'} rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-emerald-500/50 transition-all text-lg`}
                           />
                         </div>
-                        <div>
-                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Sitio Web (Vercel/URL)</label>
-                          <input 
-                            type="text" 
-                            value={stationSettings.website}
-                            onChange={(e) => setStationSettings({...stationSettings, website: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
-                          />
+                        <button
+                          type="submit"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                        >
+                          Desbloquear Panel
+                        </button>
+                        {authError && (
+                          <p className="text-red-400 text-xs text-center animate-bounce">Contraseña incorrecta</p>
+                        )}
+                      </form>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="flex flex-col gap-8">
+                        <div className="text-left flex items-center justify-between">
+                          <div>
+                            <h1 className="text-4xl font-display font-extrabold mb-2">
+                              Centro de <span className="text-emerald-400">Control</span>
+                            </h1>
+                            <p className="text-white/50">
+                              Inicia tu propia estación de radio en segundos.
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => setIsAuthenticated(false)}
+                            className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-white/40 hover:text-white"
+                            title="Cerrar Sesión"
+                          >
+                            <Unlock className="w-5 h-5" />
+                          </button>
                         </div>
-                        <div>
-                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Slogan / Descripción</label>
-                          <input 
-                            type="text" 
-                            value={stationSettings.description}
-                            onChange={(e) => setStationSettings({...stationSettings, description: e.target.value})}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Servidor WebSocket (Opcional)</label>
-                          <input 
-                            type="text" 
-                            value={stationSettings.wsServer}
-                            onChange={(e) => setStationSettings({...stationSettings, wsServer: e.target.value})}
-                            placeholder="wss://tu-servidor.com/ws"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
-                          />
-                          <p className="text-[9px] text-white/20 mt-1 italic">
-                            Deja vacío para usar el servidor actual. Necesario si despliegas en Vercel.
-                          </p>
-                        </div>
+                        <Broadcaster />
+                        <PlaylistLibrary />
+                      </div>
+                      
+                      <div className="flex flex-col gap-6">
+                        <CoverGenerator onCoverGenerated={setCoverUrl} />
+                        <EmbedCode />
                       </div>
                     </div>
-                    <CoverGenerator onCoverGenerated={setCoverUrl} />
-                    <EmbedCode />
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -215,13 +217,13 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-4 text-white/20">
-              <div className="flex items-center gap-4">
-                <CodeIcon className="w-4 h-4" />
-                <span className="text-[10px] font-mono uppercase tracking-widest">v1.0.0 Stable</span>
-              </div>
-              <Github className="w-4 h-4 hover:text-white transition-colors cursor-pointer" />
-            </div>
+                <div className="flex items-center justify-between px-4 text-white/20">
+                  <div className="flex items-center gap-4">
+                    <CodeIcon className="w-4 h-4" />
+                    <span className="text-[10px] font-mono uppercase tracking-widest">v1.0.0 Estable</span>
+                  </div>
+                  <Github className="w-4 h-4 hover:text-white transition-colors cursor-pointer" />
+                </div>
           </div>
 
         </div>

@@ -3,32 +3,39 @@ import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
 import path from "path";
+import Database from "better-sqlite3";
+
+const db = new Database("radio.db");
+
+// Initialize database
+db.exec(`
+  CREATE TABLE IF NOT EXISTS playlists (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS songs (
+    id TEXT PRIMARY KEY,
+    playlist_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    url TEXT NOT NULL,
+    FOREIGN KEY (playlist_id) REFERENCES playlists (id) ON DELETE CASCADE
+  );
+`);
 
 async function startServer() {
   const app = express();
+  app.use(express.json());
   const server = createServer(app);
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ server });
   const PORT = 3000;
-
-  // Handle WebSocket upgrade manually for better proxy compatibility
-  server.on("upgrade", (request, socket, head) => {
-    const pathname = new URL(request.url || "", `http://${request.headers.host}`).pathname;
-
-    if (pathname === "/ws") {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request);
-      });
-    } else {
-      socket.destroy();
-    }
-  });
 
   // Store connected listeners
   const listeners = new Set<WebSocket>();
   let broadcaster: WebSocket | null = null;
 
   wss.on("connection", (ws) => {
-    console.log("New connection");
+    console.log("Nueva conexión");
 
     ws.on("message", (data, isBinary) => {
       // Handle messages
@@ -37,7 +44,7 @@ async function startServer() {
           const message = JSON.parse(data.toString());
           if (message.type === "IDENTIFY_BROADCASTER") {
             broadcaster = ws;
-            console.log("Broadcaster identified");
+            console.log("Locutor identificado");
           }
           return;
         }
@@ -65,10 +72,10 @@ async function startServer() {
     ws.on("close", () => {
       if (ws === broadcaster) {
         broadcaster = null;
-        console.log("Broadcaster disconnected");
+        console.log("Locutor desconectado");
       }
       listeners.delete(ws);
-      console.log("Connection closed");
+      console.log("Conexión cerrada");
     });
 
     listeners.add(ws);
@@ -77,6 +84,42 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.get("/api/playlists", (req, res) => {
+    const playlists = db.prepare("SELECT * FROM playlists").all();
+    const result = playlists.map((p: any) => ({
+      ...p,
+      songs: db.prepare("SELECT * FROM songs WHERE playlist_id = ?").all(p.id)
+    }));
+    res.json(result);
+  });
+
+  app.post("/api/playlists", (req, res) => {
+    const { id, name } = req.body;
+    db.prepare("INSERT INTO playlists (id, name) VALUES (?, ?)").run(id, name);
+    res.json({ success: true });
+  });
+
+  app.delete("/api/playlists/:id", (req, res) => {
+    db.prepare("DELETE FROM playlists WHERE id = ?").run(req.params.id);
+    res.json({ success: true });
+  });
+
+  app.post("/api/playlists/:id/songs", (req, res) => {
+    const { id: songId, title, artist, url } = req.body;
+    const playlistId = req.params.id;
+    db.prepare("INSERT INTO songs (id, playlist_id, title, artist, url) VALUES (?, ?, ?, ?, ?)").run(
+      songId, playlistId, title, artist, url
+    );
+    res.json({ success: true });
+  });
+
+  app.delete("/api/playlists/:id/songs/:songId", (req, res) => {
+    db.prepare("DELETE FROM songs WHERE id = ? AND playlist_id = ?").run(
+      req.params.songId, req.params.id
+    );
+    res.json({ success: true });
   });
 
   // Vite middleware for development
