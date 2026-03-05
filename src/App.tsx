@@ -11,7 +11,7 @@ export default function App() {
   const [coverUrl, setCoverUrl] = useState<string | undefined>(undefined);
   const [stationSettings, setStationSettings] = useState({
     name: "Lysten Radio",
-    website: "https://radioweb1.vercel.app/",
+    website: "https://ais-pre-qu4td72oh2l66nwsysyezp-362610163893.us-east1.run.app",
     description: "Tu Radio, Tu Estilo, Tu Momento.",
     wsServer: "" // Empty means use current host
   });
