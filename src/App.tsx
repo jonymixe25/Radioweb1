@@ -9,6 +9,11 @@ import { motion, AnimatePresence } from "motion/react";
 export default function App() {
   const [activeTab, setActiveTab] = useState<"listener" | "broadcaster">("listener");
   const [coverUrl, setCoverUrl] = useState<string | undefined>(undefined);
+  const [stationSettings, setStationSettings] = useState({
+    name: "Lysten Radio",
+    website: "https://radioweb1.vercel.app/",
+    description: "Tu Radio, Tu Estilo, Tu Momento."
+  });
 
   return (
     <div className="min-h-screen font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
@@ -25,7 +30,7 @@ export default function App() {
             <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Radio className="text-white w-6 h-6" />
             </div>
-            <span className="font-display font-extrabold text-2xl tracking-tight">Lysten Radio</span>
+            <span className="font-display font-extrabold text-2xl tracking-tight">{stationSettings.name}</span>
           </div>
           
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5">
@@ -67,13 +72,23 @@ export default function App() {
                 >
                   <div className="text-center max-w-lg mb-4">
                     <h1 className="text-4xl md:text-5xl font-display font-extrabold mb-4 leading-tight">
-                      Tu Radio, <span className="text-emerald-400">Tu Estilo</span>, Tu Momento.
+                      {stationSettings.name.split(' ')[0]} <span className="text-emerald-400">{stationSettings.name.split(' ').slice(1).join(' ')}</span>
                     </h1>
                     <p className="text-white/50 text-lg">
-                      Sintoniza transmisiones en vivo de todo el mundo con calidad digital superior.
+                      {stationSettings.description}
                     </p>
+                    {stationSettings.website && (
+                      <a 
+                        href={stationSettings.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-block mt-4 text-xs font-mono text-emerald-400 hover:underline"
+                      >
+                        {stationSettings.website}
+                      </a>
+                    )}
                   </div>
-                  <Listener coverUrl={coverUrl} />
+                  <Listener coverUrl={coverUrl} stationName={stationSettings.name} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -96,6 +111,41 @@ export default function App() {
                   </div>
                   
                   <div className="flex flex-col gap-6">
+                    <div className="glass p-6 rounded-3xl flex flex-col gap-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <LayoutDashboard className="w-5 h-5 text-emerald-400" />
+                        <h3 className="font-display font-bold">Configuración de Estación</h3>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Nombre de la Radio</label>
+                          <input 
+                            type="text" 
+                            value={stationSettings.name}
+                            onChange={(e) => setStationSettings({...stationSettings, name: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Sitio Web (Vercel/URL)</label>
+                          <input 
+                            type="text" 
+                            value={stationSettings.website}
+                            onChange={(e) => setStationSettings({...stationSettings, website: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-white/40 uppercase font-bold mb-1 block">Slogan / Descripción</label>
+                          <input 
+                            type="text" 
+                            value={stationSettings.description}
+                            onChange={(e) => setStationSettings({...stationSettings, description: e.target.value})}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/50"
+                          />
+                        </div>
+                      </div>
+                    </div>
                     <CoverGenerator onCoverGenerated={setCoverUrl} />
                     <EmbedCode />
                   </div>

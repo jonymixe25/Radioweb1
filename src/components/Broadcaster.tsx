@@ -3,7 +3,8 @@ import { Mic, MicOff, Radio, Signal, Music, Plus, Play, Trash2, Volume2 } from "
 
 interface PlaylistItem {
   id: string;
-  file: File;
+  file?: File;
+  url?: string;
   name: string;
 }
 
@@ -14,6 +15,8 @@ export default function Broadcaster() {
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [micVolume, setMicVolume] = useState(1);
   const [musicVolume, setMusicVolume] = useState(0.5);
+  const [urlInput, setUrlInput] = useState("");
+  const [isAddingUrl, setIsAddingUrl] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -114,6 +117,29 @@ export default function Broadcaster() {
     setPlaylist(prev => prev.filter(item => item.id !== id));
   };
 
+  const addUrlToPlaylist = () => {
+    if (!urlInput.trim()) return;
+    
+    // Basic URL validation
+    try {
+      new URL(urlInput);
+    } catch (e) {
+      setError("URL no válida");
+      return;
+    }
+
+    const name = urlInput.split('/').pop() || "Canción Web";
+    const newItem: PlaylistItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      url: urlInput,
+      name: name.split('?')[0]
+    };
+
+    setPlaylist(prev => [...prev, newItem]);
+    setUrlInput("");
+    setIsAddingUrl(false);
+  };
+
   const playMusic = async (item: PlaylistItem) => {
     if (!audioContextRef.current || !musicGainRef.current) {
       setError("Inicia la transmisión primero para reproducir música.");
@@ -128,7 +154,18 @@ export default function Broadcaster() {
     stopMusic();
 
     try {
-      const arrayBuffer = await item.file.arrayBuffer();
+      let arrayBuffer: ArrayBuffer;
+      
+      if (item.file) {
+        arrayBuffer = await item.file.arrayBuffer();
+      } else if (item.url) {
+        const response = await fetch(item.url);
+        if (!response.ok) throw new Error("Failed to fetch audio from URL");
+        arrayBuffer = await response.arrayBuffer();
+      } else {
+        throw new Error("No audio source found");
+      }
+
       const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
       
       const source = audioContextRef.current.createBufferSource();
@@ -241,15 +278,44 @@ export default function Broadcaster() {
       </div>
 
       <div className="glass p-6 rounded-3xl flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Music className="w-5 h-5 text-purple-400" />
-            <h3 className="font-display font-bold">Lista de Reproducción</h3>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Music className="w-5 h-5 text-purple-400" />
+              <h3 className="font-display font-bold">Lista de Reproducción</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsAddingUrl(!isAddingUrl)}
+                className={`p-2 rounded-xl transition-colors ${isAddingUrl ? 'bg-purple-500 text-white' : 'bg-white/5 hover:bg-white/10'}`}
+                title="Agregar desde URL"
+              >
+                <Plus className={`w-4 h-4 transition-transform ${isAddingUrl ? 'rotate-45' : ''}`} />
+              </button>
+              <label className="cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-colors" title="Subir archivo">
+                <Plus className="w-4 h-4" />
+                <input type="file" multiple accept="audio/*" onChange={addToPlaylist} className="hidden" />
+              </label>
+            </div>
           </div>
-          <label className="cursor-pointer bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-colors">
-            <Plus className="w-4 h-4" />
-            <input type="file" multiple accept="audio/*" onChange={addToPlaylist} className="hidden" />
-          </label>
+
+          {isAddingUrl && (
+            <div className="flex gap-2 animate-in slide-in-from-top-2 duration-200">
+              <input 
+                type="text" 
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="Pega la URL del audio..."
+                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-purple-500/50"
+              />
+              <button 
+                onClick={addUrlToPlaylist}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+              >
+                Agregar
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">

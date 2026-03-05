@@ -3,11 +3,12 @@ import { Play, Pause, Volume2, Radio, Loader2, Wifi, WifiOff } from "lucide-reac
 
 interface ListenerProps {
   coverUrl?: string;
+  stationName?: string;
 }
 
 type PlayerStatus = "idle" | "connecting" | "buffering" | "live" | "offline";
 
-export default function Listener({ coverUrl }: ListenerProps) {
+export default function Listener({ coverUrl, stationName = "Lysten Radio" }: ListenerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [status, setStatus] = useState<PlayerStatus>("idle");
   const [volume, setVolume] = useState(0.8);
@@ -148,7 +149,7 @@ export default function Listener({ coverUrl }: ListenerProps) {
       </div>
 
       <div className="w-full text-center">
-        <h3 className="text-xl font-display font-bold">Lysten Radio Player</h3>
+        <h3 className="text-xl font-display font-bold">{stationName}</h3>
         <p className="text-white/40 text-sm mt-1">
           {status === "live" ? "Transmisión en alta fidelidad" : "Pulsa reproducir para sintonizar"}
         </p>
