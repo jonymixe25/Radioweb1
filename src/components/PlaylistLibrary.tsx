@@ -125,6 +125,10 @@ export default function PlaylistLibrary() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        alert("El archivo es demasiado grande (máximo 20MB)");
+        return;
+      }
       setIsSaving(true);
       try {
         const formData = new FormData();
@@ -135,21 +139,19 @@ export default function PlaylistLibrary() {
           body: formData,
         });
 
+        const data = await response.json();
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Upload failed:", errorText);
-          throw new Error(`Error al subir archivo: ${response.status} ${response.statusText}`);
+          throw new Error(data.error || `Error ${response.status}: ${response.statusText}`);
         }
 
-        const data = await response.json();
         setNewSong({
           ...newSong,
           title: newSong.title || file.name.replace(/\.[^/.]+$/, ""),
           url: data.url
         });
-      } catch (err) {
+      } catch (err: any) {
         console.error("Upload error:", err);
-        alert("Error al subir el archivo. Inténtalo de nuevo.");
+        alert(`Error al subir el archivo: ${err.message || "Inténtalo de nuevo."}`);
       } finally {
         setIsSaving(false);
       }
@@ -292,11 +294,12 @@ export default function PlaylistLibrary() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isSaving}
                   className="bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-colors border border-white/10 disabled:opacity-50"
-                  title="Subir archivo"
+                  title="Subir archivo (Máx. 20MB)"
                 >
                   {isSaving ? <Loader2 className="w-4 h-4 text-white/60 animate-spin" /> : <Upload className="w-4 h-4 text-white/60" />}
                 </button>
               </div>
+              <p className="text-[10px] text-white/20 px-1">Máximo 20MB por archivo.</p>
               <button
                 onClick={addSongToActive}
                 disabled={!newSong.title || !newSong.url || isSaving}
