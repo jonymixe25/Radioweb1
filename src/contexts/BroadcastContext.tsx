@@ -88,6 +88,7 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
   };
 
   const playSong = async (songUrl: string, songId: string, onEnd?: () => void) => {
+    console.log("Playing song:", songUrl);
     try {
       await connectSocket();
       stopSong(); // Stop any current song
@@ -98,17 +99,22 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
 
       let response;
       try {
-        response = await fetch(songUrl);
-        if (!response.ok) throw new Error("Direct fetch failed");
-      } catch (err) {
-        if (songUrl.startsWith("blob:")) {
-          throw err; // Re-throw if it's a local blob that failed
+        console.log("Fetching song directly:", songUrl);
+        const fetchUrl = songUrl.startsWith("/") ? window.location.origin + songUrl : songUrl;
+        response = await fetch(fetchUrl);
+        if (!response.ok) throw new Error(`Direct fetch failed with status: ${response.status}`);
+      } catch (err: any) {
+        console.warn("Direct fetch failed:", err.message);
+        const isExternal = songUrl.startsWith("http") && !songUrl.includes(window.location.host);
+        if (!isExternal) {
+          throw err; // Don't proxy local or blob URLs
         }
-        console.log("Direct fetch failed or CORS issue, trying proxy...");
+        console.log("Trying proxy for external URL:", songUrl);
         response = await fetch(`/api/proxy-audio?url=${encodeURIComponent(songUrl)}`);
-        if (!response.ok) throw new Error("Proxy fetch failed");
+        if (!response.ok) throw new Error(`Proxy fetch failed with status: ${response.status}`);
       }
 
+      console.log("Decoding audio data...");
       const arrayBuffer = await response.arrayBuffer();
       
       const tempContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -171,9 +177,9 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
       setActiveSongId(songId);
       setIsBroadcasting(true);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error playing song:", err);
-      setError("Error al reproducir la canción.");
+      setError(`Error al reproducir la canción: ${err.message || "Error de red"}`);
     }
   };
 

@@ -3,7 +3,30 @@ import { createServer as createViteServer } from "vite";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer } from "http";
 import path from "path";
+import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
+import multer from "multer";
+import fs from "fs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadsDir = path.resolve(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 
 const db = new Database("radio.db");
 
@@ -25,6 +48,10 @@ db.exec(`
 
 async function startServer() {
   const app = express();
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
   app.use(express.json());
   const server = createServer(app);
   const wss = new WebSocketServer({ server });
@@ -129,9 +156,24 @@ async function startServer() {
     }
 
     try {
-      const response = await fetch(url);
+      if (!url.startsWith("http")) {
+        return res.status(400).send("Solo se permiten URLs absolutas (http/https)");
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+      });
+      
+      clearTimeout(timeout);
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
+        return res.status(response.status).send(`Error de origen: ${response.statusText}`);
       }
 
       const contentType = response.headers.get("content-type");
@@ -141,10 +183,33 @@ async function startServer() {
 
       const arrayBuffer = await response.arrayBuffer();
       res.send(Buffer.from(arrayBuffer));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Proxy error:", error);
-      res.status(500).send("Error fetching audio");
+      res.status(500).send(`Error al obtener audio: ${error.message}`);
     }
+  });
+
+  app.post("/api/upload", (req, res) => {
+    upload.single("file")(req, res, (err) => {
+      if (err) {
+        console.error("Multer error:", err);
+        return res.status(400).json({ error: err.message });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const url = `/uploads/${req.file.filename}`;
+      console.log(`File uploaded successfully: ${req.file.filename} -> ${url}`);
+      res.json({ url });
+    });
+  });
+
+  app.use("/uploads", express.static(uploadsDir));
+
+  // 404 for API routes to avoid falling through to Vite
+  app.all("/api/*", (req, res) => {
+    console.warn(`API Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.url}` });
   });
 
   // Vite middleware for development

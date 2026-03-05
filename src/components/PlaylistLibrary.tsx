@@ -122,15 +122,37 @@ export default function PlaylistLibrary() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setNewSong({
-        ...newSong,
-        title: newSong.title || file.name.replace(/\.[^/.]+$/, ""),
-        url: url
-      });
+      setIsSaving(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Upload failed:", errorText);
+          throw new Error(`Error al subir archivo: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setNewSong({
+          ...newSong,
+          title: newSong.title || file.name.replace(/\.[^/.]+$/, ""),
+          url: data.url
+        });
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("Error al subir el archivo. Inténtalo de nuevo.");
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -268,10 +290,11 @@ export default function PlaylistLibrary() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-colors border border-white/10"
+                  disabled={isSaving}
+                  className="bg-white/5 hover:bg-white/10 p-2 rounded-xl transition-colors border border-white/10 disabled:opacity-50"
                   title="Subir archivo"
                 >
-                  <Upload className="w-4 h-4 text-white/60" />
+                  {isSaving ? <Loader2 className="w-4 h-4 text-white/60 animate-spin" /> : <Upload className="w-4 h-4 text-white/60" />}
                 </button>
               </div>
               <button
