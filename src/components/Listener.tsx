@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Play, Pause, Volume2, Radio } from "lucide-react";
+import { motion } from "motion/react";
 
 interface ListenerProps {
   coverUrl?: string;
@@ -77,8 +78,33 @@ export default function Listener({ coverUrl }: ListenerProps) {
     }
   }, [volume]);
 
+  useEffect(() => {
+    // Attempt to start listening automatically on mount
+    // Note: Most browsers will block this until user interaction
+    const timer = setTimeout(() => {
+      if (!isPlaying) {
+        startListening();
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="glass p-8 rounded-3xl flex flex-col items-center gap-6 shadow-2xl w-full max-w-md">
+      {!isPlaying && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={startListening}
+          className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center gap-4 group transition-all"
+        >
+          <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center shadow-2xl shadow-emerald-500/40 group-hover:scale-110 transition-transform">
+            <Play className="w-10 h-10 text-white fill-current ml-1" />
+          </div>
+          <span className="text-white font-bold text-lg tracking-wide uppercase">Sintonizar Ahora</span>
+        </motion.button>
+      )}
+
       <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-white/5 group">
         {coverUrl ? (
           <img 

@@ -8,7 +8,7 @@ interface BroadcastContextType {
   setIsMonitoring: (value: boolean) => void;
   startMic: () => Promise<void>;
   stopMic: () => void;
-  playSong: (songUrl: string, songId: string) => Promise<void>;
+  playSong: (songUrl: string, songId: string, onEnd?: () => void) => Promise<void>;
   stopSong: () => void;
   error: string | null;
 }
@@ -87,7 +87,7 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
     if (!activeSongId) setIsBroadcasting(false);
   };
 
-  const playSong = async (songUrl: string, songId: string) => {
+  const playSong = async (songUrl: string, songId: string, onEnd?: () => void) => {
     try {
       await connectSocket();
       stopSong(); // Stop any current song
@@ -123,7 +123,10 @@ export function BroadcastProvider({ children }: { children: React.ReactNode }) {
 
       const sendNextChunk = () => {
         if (offset >= data.length || !songIntervalRef.current) {
-          if (offset >= data.length) stopSong();
+          if (offset >= data.length) {
+            stopSong();
+            if (onEnd) onEnd();
+          }
           return;
         }
 

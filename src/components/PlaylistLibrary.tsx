@@ -19,6 +19,7 @@ export default function PlaylistLibrary() {
   const { playSong, stopSong, activeSongId } = useBroadcast();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAutoplay, setIsAutoplay] = useState(true);
 
   useEffect(() => {
     fetchPlaylists();
@@ -42,6 +43,27 @@ export default function PlaylistLibrary() {
   const [newSong, setNewSong] = useState({ title: "", artist: "", url: "" });
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSongEnd = (playlistId: string, currentSongId: string) => {
+    if (!isAutoplay) return;
+    
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+
+    const currentIndex = playlist.songs.findIndex(s => s.id === currentSongId);
+    if (currentIndex !== -1 && currentIndex < playlist.songs.length - 1) {
+      const nextSong = playlist.songs[currentIndex + 1];
+      playSong(nextSong.url, nextSong.id, () => handleSongEnd(playlistId, nextSong.id));
+    }
+  };
+
+  const startPlaylist = (playlistId: string) => {
+    const playlist = playlists.find(p => p.id === playlistId);
+    if (playlist && playlist.songs.length > 0) {
+      const firstSong = playlist.songs[0];
+      playSong(firstSong.url, firstSong.id, () => handleSongEnd(playlistId, firstSong.id));
+    }
+  };
 
   const addPlaylist = async () => {
     if (!newPlaylistName.trim()) return;
@@ -121,6 +143,15 @@ export default function PlaylistLibrary() {
           <ListMusic className="w-5 h-5 text-emerald-400" />
           Biblioteca de Playlists
         </h3>
+        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+          <span className="text-[10px] uppercase font-bold text-white/40">Autoplay</span>
+          <button
+            onClick={() => setIsAutoplay(!isAutoplay)}
+            className={`w-8 h-4 rounded-full transition-colors relative ${isAutoplay ? 'bg-emerald-500' : 'bg-white/10'}`}
+          >
+            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isAutoplay ? 'left-4.5' : 'left-0.5'}`} />
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -182,6 +213,13 @@ export default function PlaylistLibrary() {
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-emerald-400 text-sm uppercase tracking-wider">Contenido: {activePlaylist.name}</h4>
             <div className="flex gap-2">
+              <button 
+                onClick={() => startPlaylist(activePlaylistId)}
+                className="flex items-center gap-2 text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                Iniciar Playlist
+              </button>
               <button 
                 onClick={() => setShowAddSong(!showAddSong)}
                 className="flex items-center gap-2 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg transition-colors"
@@ -274,7 +312,7 @@ export default function PlaylistLibrary() {
                       </button>
                     ) : (
                       <button 
-                        onClick={() => playSong(song.url, song.id)}
+                        onClick={() => playSong(song.url, song.id, () => handleSongEnd(activePlaylistId, song.id))}
                         className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors"
                         title="Transmitir Canción"
                       >
