@@ -1,0 +1,5 @@
+{
+  "name": "Lysten Radio",
+  "description": "Plataforma de transmisión de radio en vivo con generador de carátulas por IA y códigos de inserción.",
+  "requestFramePermissions": ["microphone"]
+}
