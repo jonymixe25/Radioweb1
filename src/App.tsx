@@ -7,7 +7,6 @@ import PlaylistLibrary from "./components/PlaylistLibrary";
 import { BroadcastProvider } from "./contexts/BroadcastContext";
 import { Radio, LayoutDashboard, Music, Code as CodeIcon, Github, Lock, Unlock, Key } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Analytics } from "@vercel/analytics/react";
 
 export default function App() {
   return (
@@ -235,7 +234,6 @@ function AppContent() {
           &copy; {new Date().getFullYear()} Lysten Radio. Hecho con pasión por la música.
         </p>
       </footer>
-      <Analytics />
     </div>
   );
 }
